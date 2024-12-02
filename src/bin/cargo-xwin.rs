@@ -2,7 +2,7 @@ use std::env;
 use std::ffi::OsString;
 use std::process::Command;
 
-use cargo_xwin::{Build, Check, Clippy, Run, Rustc, Test};
+use cargo_xwin::{Build, Check, Clippy, InitXWin, Run, Rustc, Test};
 use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
@@ -12,13 +12,23 @@ use clap::{Parser, Subcommand};
     styles = cargo_options::styles(),
 )]
 pub enum Cli {
+    /// Can also be used to run all the cargo commands
     #[command(subcommand, name = "xwin")]
     Opt(Opt),
     // flatten opt here so that `cargo-xwin build` also works
     #[command(flatten)]
     Cargo(Opt),
+    /// Manage the xwin installation
+    #[command(subcommand, name = "manage-xwin")]
+    ManageXWin(ManageXWin),
     #[command(external_subcommand)]
     External(Vec<OsString>),
+}
+
+#[derive(Debug, Subcommand)]
+#[command(version, display_order = 2)]
+pub enum ManageXWin {
+    Init(InitXWin),
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -49,6 +59,9 @@ fn main() -> anyhow::Result<()> {
             Opt::Test(test) => test.execute()?,
             Opt::Check(check) => check.execute()?,
             Opt::Clippy(clippy) => clippy.execute()?,
+        },
+        Cli::ManageXWin(opt) => match opt {
+            ManageXWin::Init(init) => init.execute()?,
         },
         Cli::External(args) => {
             let mut child = Command::new(env::var_os("CARGO").unwrap_or("cargo".into()))
